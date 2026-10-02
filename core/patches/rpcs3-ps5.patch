@@ -1,0 +1,180 @@
+--- a/rpcs3/Input/pad_thread.cpp
++++ b/rpcs3/Input/pad_thread.cpp
+@@ -1,11 +1,13 @@
+ #include "stdafx.h"
+ #include "pad_thread.h"
+ #include "product_info.h"
++#ifndef __PROSPERO__
+ #include "ds3_pad_handler.h"
+ #include "ds4_pad_handler.h"
+ #include "dualsense_pad_handler.h"
+ #include "skateboard_pad_handler.h"
+ #include "ps_move_handler.h"
++#endif
+ #ifdef _WIN32
+ #include "xinput_pad_handler.h"
+ #include "mm_joystick_handler.h"
+@@ -15,7 +17,7 @@
+ #ifdef HAVE_SDL3
+ #include "sdl_pad_handler.h"
+ #endif
+-#ifndef ANDROID
++#if !defined(ANDROID) && !defined(__PROSPERO__)
+ #include "keyboard_pad_handler.h"
+ #endif
+ #include "Emu/Io/Null/NullPadHandler.h"
+@@ -142,6 +144,9 @@
+ 	// Adjust to the different pad handlers
+ 	for (usz i = 0; i < g_cfg_input.player.size(); i++)
+ 	{
++#ifdef __PROSPERO__
++        g_cfg_input.player[i]->handler.set(pad_handler::null);
++#endif
+ 		std::shared_ptr<PadHandlerBase> handler;
+ 		pad_thread::InitPadConfig(g_cfg_input.player[i]->config, g_cfg_input.player[i]->handler, handler);
+ 	}
+@@ -154,7 +159,7 @@
+ 
+ 	input_log.trace("Using pad config:\n%s", g_cfg_input);
+ 
+-#ifndef ANDROID
++#if !defined(ANDROID) && !defined(__PROSPERO__)
+ 	std::shared_ptr<keyboard_pad_handler> keyptr;
+ #endif
+ 
+@@ -165,6 +170,9 @@
+ 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; i++) // max 7 pads
+ 	{
+ 		cfg_player* cfg = g_cfg_input.player[i];
++#ifdef __PROSPERO__
++        cfg->handler.set(pad_handler::null);
++#endif
+ 		std::shared_ptr<PadHandlerBase> cur_pad_handler;
+ 
+ 		const pad_handler handler_type = pad_settings[i].is_ldd_pad ? pad_handler::null : cfg->handler.get();
+@@ -177,7 +185,7 @@
+ 		{
+ 			if (handler_type == pad_handler::keyboard)
+ 			{
+-#ifndef ANDROID
++#if !defined(ANDROID) && !defined(__PROSPERO__)
+ 				keyptr = std::make_shared<keyboard_pad_handler>();
+ 				keyptr->moveToThread(static_cast<QThread*>(m_curthread));
+ 				keyptr->SetTargetWindow(static_cast<QWindow*>(m_curwindow));
+@@ -852,6 +860,11 @@
+ 
+ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
+ {
++#ifdef __PROSPERO__
++    if (type != pad_handler::null)
++        fmt::throw_exception("PS5 game controller handler unavailable: %s", type);
++    return std::make_shared<NullPadHandler>();
++#else
+ 	switch (type)
+ 	{
+ 	case pad_handler::null:
+@@ -889,6 +902,7 @@
+ 	}
+ 
+ 	return nullptr;
++#endif
+ }
+ 
+ void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler)
+--- a/rpcs3/Input/mouse_gyro_handler.cpp
++++ b/rpcs3/Input/mouse_gyro_handler.cpp
+@@ -1,10 +1,12 @@
+ #include "stdafx.h"
+ #include "mouse_gyro_handler.h"
+ 
++#ifndef __PROSPERO__
+ #include <QEvent>
+ #include <QMouseEvent>
+ #include <QWheelEvent>
+ #include <QWindow>
++#endif
+ 
+ #include <algorithm>
+ 
+@@ -64,6 +66,11 @@
+ 
+ void mouse_gyro_handler::handle_event(QEvent* ev, const QWindow& win)
+ {
++#ifdef __PROSPERO__
++    (void)ev;
++    (void)win;
++    if (m_enabled) fmt::throw_exception("Qt mouse input is unavailable on PS5");
++#else
+ 	if (!m_enabled)
+ 		return;
+ 
+@@ -126,6 +133,7 @@
+ 		break;
+ 	}
+ 	}
++#endif
+ }
+ 
+ void mouse_gyro_handler::apply_gyro(const std::shared_ptr<Pad>& pad)
+--- a/rpcs3/Emu/System.cpp
++++ b/rpcs3/Emu/System.cpp
+@@ -291,6 +291,20 @@
+ // Some settings are not allowed with certain conditions
+ static void fixup_settings(const psf::registry* _psf)
+ {
++#ifdef __PROSPERO__
++    // Apply after every global/per-title load, before core construction.
++    // Native game output/input providers have not been qualified yet.
++    g_cfg.core.ppu_decoder.set(ppu_decoder_type::_static);
++    g_cfg.core.spu_decoder.set(spu_decoder_type::_static);
++    g_cfg.video.renderer.set(video_renderer::null);
++    g_cfg.audio.renderer.set(audio_renderer::null);
++    g_cfg.audio.music.set(music_handler::null);
++    g_cfg.io.keyboard.set(keyboard_handler::null);
++    g_cfg.io.mouse.set(mouse_handler::null);
++    g_cfg.io.camera.set(camera_handler::null);
++    g_cfg.io.move.set(move_handler::null);
++    g_cfg.io.mouse_based_gyro_enabled.set(false);
++#endif
+ 	// Disable some incompatible settings in headless mode
+ 	if (Emu.IsHeadless())
+ 	{
+--- a/Utilities/File.cpp
++++ b/Utilities/File.cpp
+@@ -2443,7 +2443,9 @@
+ 
+ std::string fs::get_executable_path()
+ {
+-#ifdef ANDROID
++#ifdef __PROSPERO__
++    return "/app0/eboot.bin";
++#elif defined(ANDROID)
+ 	return g_android_executable_dir + "/dummy-rpcs3.apk";
+ #else
+ 	// Use magic static
+@@ -2517,7 +2519,12 @@
+ 
+ const std::string& fs::get_config_dir([[maybe_unused]] bool get_config_subdirectory)
+ {
+-#ifdef ANDROID
++#ifdef __PROSPERO__
++    // This function is used by pre-main config constructors. Do not rely on
++    // environment variables populated later by the application entry point.
++    static const std::string dir = "/download0/rpcs3/";
++    return dir;
++#elif defined(ANDROID)
+ 	return g_android_config_dir;
+ #else
+ 	// Use magic static
+@@ -2615,7 +2622,10 @@
+ 
+ const std::string& fs::get_cache_dir()
+ {
+-#ifdef ANDROID
++#ifdef __PROSPERO__
++    static const std::string dir = "/download0/rpcs3/cache/";
++    return dir;
++#elif defined(ANDROID)
+ 	return g_android_cache_dir;
+ #else
+ 	static const std::string s_dir = []

@@ -1,0 +1,77 @@
+--- a/src/sdk/linker.cpp
++++ b/src/sdk/linker.cpp
+@@ -1004,7 +1004,7 @@
+             "Failed to normalize application ELF type");
+ }
+ 
+-void rewrite_application_sce_dynamic(const fs::path &path,
++std::vector<std::string> rewrite_application_sce_dynamic(const fs::path &path,
+                                      const fs::path &sdk_root) {
+     auto bytes=read_binary_file(path);
+     if (bytes.size()<64 || bytes[0]!=0x7f || bytes[1]!='E' ||
+@@ -1167,6 +1167,7 @@
+         sce_provider provider;
+     };
+     std::vector<import_record> imports;
++    std::vector<std::string> absent_weak;
+     std::vector<std::string> symbol_names(symbol_count);
+     for (std::uint32_t i=1;i<symbol_count;++i) {
+         const auto at=symtab_off+static_cast<std::size_t>(i*syment);
+@@ -1184,11 +1185,21 @@
+                 break;
+             }
+         }
+-        if (found==nullptr)
++        if (found==nullptr) {
++            // An undefined ELF weak reference has address zero when no linked
++            // provider exists. Ask lld to bind it locally before writing SCE
++            // metadata; never manufacture an import or ignore a required one.
++            if ((bytes[at+4]>>4)==2u) {
++                absent_weak.push_back(name);
++                continue;
++            }
+             throw std::runtime_error(
+                 "No linked PS5 stub provides import: "+name);
++        }
+         imports.push_back({i,name,found->provider});
+     }
++
++    if (!absent_weak.empty()) return absent_weak;
+ 
+     struct module_record {
+         std::string name,soname;
+@@ -1466,6 +1477,7 @@
+     elf_w64(bytes,dynlib_ph.header_offset+0x28,linked_end);
+ 
+     write_binary_file(path,bytes);
++    return {};
+ }
+ 
+ /* Every image the console toolchain produces identifies itself as FreeBSD, with
+@@ -2024,7 +2036,7 @@
+ int main(int argc, char **argv) {
+     try {
+         auto config = parse(argc, argv);
+-        const auto command = command_for(config);
++        auto command = command_for(config);
+         if (config.validate_runtime) {
+             if (config.selected == profile::native)
+                 std::cout << "OpenProspero native payload CRT contains the required runtime symbols.\n";
+@@ -2049,7 +2061,16 @@
+             const auto output = linker_output_path(config.linker_arguments);
+             if (config.selected == profile::application) {
+                 normalize_application_elf(output);
+-                rewrite_application_sce_dynamic(output, config.sdk_root);
++                const auto absent_weak = rewrite_application_sce_dynamic(output, config.sdk_root);
++                if (!absent_weak.empty()) {
++                    for (const auto &name : absent_weak)
++                        command.push_back("--defsym=" + name + "=0");
++                    const int rebound = execute(command);
++                    if (rebound != 0) return rebound;
++                    normalize_application_elf(output);
++                    if (!rewrite_application_sce_dynamic(output, config.sdk_root).empty())
++                        throw std::runtime_error("Unresolved weak references after local zero binding");
++                }
+                 rewrite_application_plt(output);
+                 write_application_versions(output);
+             } else {

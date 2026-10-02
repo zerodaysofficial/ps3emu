@@ -1,0 +1,156 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+cmake_minimum_required(VERSION 3.28)
+project(rpcs3_ps5_core LANGUAGES C CXX ASM)
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Target dependencies are static" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "No desktop dependency test programs" FORCE)
+set(RPCS3_ROOT "" CACHE PATH "Pinned official RPCS3 source")
+set(ZD_EXTRA_DEPS "" CACHE PATH "Extra versioned source dependencies")
+set(ZD_FFMPEG_PREFIX "" CACHE PATH "Source-built PS5 FFmpeg install")
+if(NOT EXISTS "${RPCS3_ROOT}/rpcs3/Emu/CMakeLists.txt")
+  message(FATAL_ERROR "RPCS3_ROOT must name the pinned official source snapshot")
+endif()
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake/modules" "${RPCS3_ROOT}/buildfiles/cmake")
+set(USE_LTO OFF)
+set(USE_FAUDIO OFF)
+set(USE_SDL OFF)
+set(USE_PRECOMPILED_HEADERS OFF)
+set(USE_SYSTEM_OPENAL OFF)
+set(WITH_LLVM OFF)
+add_compile_definitions(ARCH_X64=1)
+add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:-frtti>")
+foreach(runtime m atomic)
+  add_library(${runtime} INTERFACE IMPORTED GLOBAL)
+  set_property(TARGET ${runtime} PROPERTY INTERFACE_LINK_LIBRARIES c)
+endforeach()
+add_library(zd_optional INTERFACE)
+foreach(name llvm sdl3 vulkan libevdev vulkanmemoryallocator)
+  add_library(3rdparty::${name} ALIAS zd_optional)
+endforeach()
+
+function(zd_subdir name)
+  add_subdirectory("${RPCS3_ROOT}/3rdparty/${name}" "third_party/${name}" EXCLUDE_FROM_ALL)
+endfunction()
+zd_subdir(asmjit)
+target_compile_options(asmjit PRIVATE -w)
+zd_subdir(yaml-cpp)
+add_library(3rdparty::yaml-cpp ALIAS yaml-cpp)
+zd_subdir(pugixml)
+add_library(3rdparty::pugixml ALIAS pugixml)
+zd_subdir(zlib)
+add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
+set(ZLIB_LIBRARY zlibstatic)
+set(ZLIB_INCLUDE_DIR "${RPCS3_ROOT}/3rdparty/zlib/zlib")
+set(ZLIB_INCLUDE_DIRS "${ZLIB_INCLUDE_DIR};${CMAKE_BINARY_DIR}/third_party/zlib/zlib")
+zd_subdir(libpng)
+add_library(3rdparty::libpng ALIAS png_static)
+zd_subdir(zstd)
+add_library(3rdparty::zstd ALIAS 3rdparty_zstd)
+zd_subdir(SoundTouch)
+add_library(3rdparty::soundtouch ALIAS soundtouch)
+zd_subdir(glslang)
+add_library(3rdparty::glslang ALIAS 3rdparty_glslang)
+target_include_directories(3rdparty_glslang INTERFACE "${RPCS3_ROOT}/3rdparty/glslang/glslang")
+zd_subdir(wolfssl)
+add_library(3rdparty::wolfssl ALIAS wolfssl)
+zd_subdir(curl)
+add_library(3rdparty::libcurl ALIAS 3rdparty_libcurl)
+zd_subdir(miniupnp)
+add_library(3rdparty::miniupnpc ALIAS 3rdparty_miniupnpc)
+set(FETCHCONTENT_SOURCE_DIR_ABSL "${ZD_EXTRA_DEPS}/abseil-cpp")
+set(FETCHCONTENT_FULLY_DISCONNECTED ON)
+zd_subdir(protobuf)
+add_library(3rdparty::protobuf ALIAS 3rdparty_protobuf)
+set(HAVE_SYS_SOUNDCARD_H OFF CACHE BOOL "PS5 does not expose desktop OSS" FORCE)
+zd_subdir(cubeb)
+zd_subdir(rtmidi)
+add_library(3rdparty::rtmidi ALIAS rtmidi)
+zd_subdir(stblib)
+add_library(3rdparty::stblib ALIAS 3rdparty_stblib)
+zd_subdir(fusion)
+set(ALSOFT_BACKEND_OSS OFF CACHE BOOL "No desktop OSS provider" FORCE)
+set(ALSOFT_BACKEND_ALSA OFF CACHE BOOL "No desktop ALSA provider" FORCE)
+set(ALSOFT_BACKEND_PULSEAUDIO OFF CACHE BOOL "No desktop PulseAudio provider" FORCE)
+set(ALSOFT_BACKEND_JACK OFF CACHE BOOL "No desktop JACK provider" FORCE)
+set(ALSOFT_BACKEND_PIPEWIRE OFF CACHE BOOL "No desktop PipeWire provider" FORCE)
+set(ALSOFT_BACKEND_PORTAUDIO OFF CACHE BOOL "No desktop PortAudio provider" FORCE)
+set(ALSOFT_BACKEND_SDL2 OFF CACHE BOOL "No desktop SDL provider" FORCE)
+set(ALSOFT_BACKEND_WAVE OFF CACHE BOOL "No file output backend" FORCE)
+set(ALSOFT_ENABLE_MODULES OFF CACHE BOOL "Use portable original headers" FORCE)
+zd_subdir(OpenAL)
+add_library(3rdparty::openal ALIAS 3rdparty_openal)
+
+set(ZD_USB "${RPCS3_ROOT}/3rdparty/libusb/libusb/libusb")
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/usb-config")
+file(WRITE "${CMAKE_BINARY_DIR}/usb-config/config.h" "#define PLATFORM_POSIX 1\n#define HAVE_CLOCK_GETTIME 1\n#define HAVE_SYS_TIME_H 1\n#define HAVE_POLL_H 1\n#define DEFAULT_VISIBILITY __attribute__((visibility(\"default\")))\n")
+add_library(zd_libusb STATIC "${ZD_USB}/core.c" "${ZD_USB}/descriptor.c" "${ZD_USB}/hotplug.c" "${ZD_USB}/io.c" "${ZD_USB}/strerror.c" "${ZD_USB}/sync.c" "${ZD_USB}/os/events_posix.c" "${ZD_USB}/os/threads_posix.c" "${ZD_USB}/os/null_usb.c")
+target_include_directories(zd_libusb PUBLIC "${ZD_USB}" PRIVATE "${CMAKE_BINARY_DIR}/usb-config")
+target_compile_options(zd_libusb PRIVATE -w)
+add_library(3rdparty::libusb ALIAS zd_libusb)
+
+add_library(zd_ffmpeg INTERFACE)
+target_include_directories(zd_ffmpeg INTERFACE "${ZD_FFMPEG_PREFIX}/include")
+foreach(lib avformat avcodec swscale swresample avutil)
+  if(NOT EXISTS "${ZD_FFMPEG_PREFIX}/lib/lib${lib}.a")
+    message(FATAL_ERROR "Missing source-built PS5 FFmpeg lib${lib}.a")
+  endif()
+  target_link_libraries(zd_ffmpeg INTERFACE "${ZD_FFMPEG_PREFIX}/lib/lib${lib}.a")
+endforeach()
+add_library(3rdparty::ffmpeg ALIAS zd_ffmpeg)
+add_library(zd_opengl INTERFACE)
+target_include_directories(zd_opengl INTERFACE "$ENV{PS5_OPENGL_SDK}/include")
+add_library(3rdparty::opengl ALIAS zd_opengl)
+add_library(zd_glew STATIC "${ZD_EXTRA_DEPS}/glew-2.2.0/src/glew.c")
+target_include_directories(zd_glew PUBLIC "${ZD_EXTRA_DEPS}/glew-2.2.0/include" PRIVATE "$ENV{PS5_OPENGL_SDK}/include")
+target_compile_definitions(zd_glew PUBLIC GLEW_STATIC GLEW_EGL GLEW_NO_GLU)
+add_library(3rdparty::glew ALIAS zd_glew)
+
+include(libiconv.cmake)
+add_subdirectory("${RPCS3_ROOT}/rpcs3/Emu" emu)
+target_include_directories(rpcs3_emu PUBLIC "${RPCS3_ROOT}" "${RPCS3_ROOT}/rpcs3")
+target_compile_options(rpcs3_emu PRIVATE -ferror-limit=4 -Wno-deprecated-declarations)
+set_source_files_properties("${RPCS3_ROOT}/rpcs3/Emu/Cell/Modules/cellL10n.cpp"
+  TARGET_DIRECTORY rpcs3_emu
+  PROPERTIES INCLUDE_DIRECTORIES "${ZD_ICONV_HEADERS}")
+target_link_libraries(rpcs3_emu PRIVATE zd_iconv)
+target_link_libraries(rpcs3_emu PRIVATE "$<LINK_ONLY:Fusion>")
+
+file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/generated")
+file(WRITE "${CMAKE_BINARY_DIR}/generated/git-version.h" "#define RPCS3_GIT_VERSION \"0-17320679\"\n#define RPCS3_GIT_BRANCH \"ps5-core\"\n#define RPCS3_GIT_FULL_BRANCH \"local_build\"\n")
+add_library(zd_core_adapter STATIC bridge.cpp callbacks.cpp
+  "${RPCS3_ROOT}/rpcs3/rpcs3_version.cpp"
+  "${RPCS3_ROOT}/rpcs3/Input/pad_thread.cpp"
+  "${RPCS3_ROOT}/rpcs3/Input/product_info.cpp"
+  "${RPCS3_ROOT}/rpcs3/Input/mouse_gyro_handler.cpp"
+  "${RPCS3_ROOT}/rpcs3/Input/ps_move_config.cpp"
+  "${RPCS3_ROOT}/rpcs3/Input/ps_move_tracker.cpp")
+target_include_directories(zd_core_adapter PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../include" "${CMAKE_BINARY_DIR}/generated")
+target_compile_options(zd_core_adapter PRIVATE -ferror-limit=4 -Wno-deprecated-declarations)
+target_link_libraries(zd_core_adapter PUBLIC rpcs3_emu)
+
+set(ZD_FRONTEND "${CMAKE_CURRENT_SOURCE_DIR}/../")
+add_executable(zd_application
+  "${ZD_FRONTEND}/src/catalog.c" "${ZD_FRONTEND}/src/fs.c"
+  "${ZD_FRONTEND}/src/decode_budget.c" "${ZD_FRONTEND}/src/ui_model.c"
+  "${ZD_FRONTEND}/src/input.c" "${ZD_FRONTEND}/src/ui_render.c"
+  "${ZD_FRONTEND}/src/runtime_shims.c" "${ZD_FRONTEND}/src/platform_ps5.c"
+  "$ENV{PS5_OPENGL_ROOT}/native-app/app_heap.c")
+target_include_directories(zd_application PRIVATE "${ZD_FRONTEND}/include" "$ENV{OPENPROSPERO_ROOT}/include" "$ENV{PS5_OPENGL_SDK}/include")
+target_compile_definitions(zd_application PRIVATE ZD_CORE_LINKED=1)
+target_compile_options(zd_application PRIVATE -Wall -Wextra -Werror -fvisibility=hidden)
+target_link_options(zd_application PRIVATE
+  --error-limit=0 --strip-debug
+  --wrap=malloc --wrap=calloc --wrap=realloc --wrap=free
+  --wrap=posix_memalign --wrap=malloc_usable_size -u ps5_agc_gate2_run
+  "-Map=${CMAKE_BINARY_DIR}/application.map")
+target_link_libraries(zd_application PRIVATE zd_core_adapter
+  "$ENV{PS5_OPENGL_SDK}/lib/libPS5OpenGL.a"
+  "$ENV{OPENPROSPERO_SDK}/target/cxx/lib/libc.a"
+  c++ c++abi unwind SceAgc SceAgcDriver SceVideoOut SceSystemService ScePosixForWebKit pthread)
+# prospero-link --profile application injects the firmware's libSceLibcInternal
+# import stub. Do not explicitly link target/lib/libc.so: that would create a
+# DT_NEEDED libc.prx and reintroduce the firmware-4 runtime mismatch.
+set_target_properties(zd_application PROPERTIES OUTPUT_NAME application SUFFIX .elf LINKER_LANGUAGE CXX)

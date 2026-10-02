@@ -1,0 +1,28 @@
+-0766b733fe3e06dd2a7f9a3cfbf2108ac73abd17 3rdparty/7zip/7zip
+-6839b88e304a046ae1a609ff14a085371e02a4e0 3rdparty/FAudio
+-3aa921224c154a0d2c43912bc88e1c42ce1f7607 3rdparty/GPUOpen/VulkanMemoryAllocator
+-b2c48f7718ef3fcf67921a8b6534c4914e328970 3rdparty/OpenAL/openal-soft
+-a0fba77b6f9cfbdb71f8bbec58b6ac4e5e3b1097 3rdparty/SoundTouch/soundtouch
+ 416f7356967c1f66784dc1580fe157f9406d8bff 3rdparty/asmjit/asmjit (416f735)
+-484857522c73318c06f18ba0a3e17525fa98c608 3rdparty/cubeb/cubeb
+-01346829096c61b372692f6dc43ffa778c6caccd 3rdparty/curl/curl
+-fb04b1766bbbe7d2f47985b8b82fded0366efdf9 3rdparty/discord-rpc/discord-rpc
+-c54d6d4243b0dd0afcb49f2c9836d432da171a2b 3rdparty/feralinteractive/feralinteractive
+-649d9d9353184a17ae78d9df4a6fbbe7456f0428 3rdparty/ffmpeg
+ 9325424011892abacc0ce42b8bb1a8ae20264b9b 3rdparty/fusion/fusion (9325424)
+-f0bd0257c308b9a26562c1a30c4748a0219cc951 3rdparty/glslang/glslang
+-d6b2a974608dec3b76fb1e36c189f22b9cf3650c 3rdparty/hidapi/hidapi
+-cd952f49f95bb27154ae77dbb103032d95f6e580 3rdparty/libpng/libpng
+-fa2c02bb6e21974a89ea9824bc53c9932abe5f9c 3rdparty/libsdl-org/SDL
+-87a55632db62c9bdc58cd31d3ccfa673f1bb017f 3rdparty/libusb/libusb
+-ca7933e47d3a3451d81e72ac174dcb5aa28b59d1 3rdparty/llvm/llvm
+-d66872e34d9ff83a07f8b71371b13419b2089953 3rdparty/miniupnp/miniupnp
+-d4dde8afe3098f33f253278e25d45d6554afb10c 3rdparty/opencv/opencv
+-edaa823d8b36a8656d7b2b9241b7d0bfe50af878 3rdparty/protobuf/protobuf
+ c8033ce9d039e7f9d134877c363397b3cfe20816 3rdparty/pugixml (c8033ce)
+-1e5b49925aa60065db52de44c366d446a902547b 3rdparty/rtmidi/rtmidi
+ 013ac3beddff3dbffafd5177e7972067cd2b5083 3rdparty/stblib/stb (013ac3b)
+-3c5eead44904df64e6a5a1f4ebdce377d35a849a 3rdparty/wolfssl/wolfssl
+ 51a5d623e3fde1f58829a56ba910f1cb33596222 3rdparty/yaml-cpp/yaml-cpp (heads/master)
+ da607da739fa6047df13e66a2af6b8bec7c2a498 3rdparty/zlib/zlib (da607da)
+-f8745da6ff1ad1e7bab384bd1f9d742439278e99 3rdparty/zstd/zstd

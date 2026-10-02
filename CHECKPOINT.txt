@@ -1,0 +1,4 @@
+This ZIP contains the original RPCS3 C++ core linked to the native frontend.
+Game video/audio/input use Null providers; console execution is unverified.
+No runtime firmware modules or commercial games are included.
+See README.md, docs/BUILD-STATUS.md and original dependency licenses.

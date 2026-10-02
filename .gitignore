@@ -1,0 +1,9 @@
+build/
+logs/
+deps/
+.superpowers/
+__pycache__/
+release/
+private-runtime/
+assets/font.zdf
+third_party/stb/stb_image.h
