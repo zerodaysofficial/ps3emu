@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* All content access is anchored to open directory descriptors. A component
- * can never become a followed symlink between inspection and open. */
+
+
 #include "fs.h"
 #include "catalog.h"
 #include <errno.h>
@@ -8,14 +8,14 @@
 #include <string.h>
 #include <unistd.h>
 #ifdef __PROSPERO__
-/* Public FreeBSD 9 definitions from OPSDK's bundled target/cxx headers.
- * OPSDK imports syscall from the application's libkernel. If openat is
- * unavailable, return its error; never fall back to a path-based open. */
+
+
+
 #ifndef O_DIRECTORY
 #define O_DIRECTORY 0x00020000
 #endif
 static int open_relative(int fd, const char *name, int flags) {
-  return (int)syscall(499, fd, name, flags, 0); /* SYS_openat */
+  return (int)syscall(499, fd, name, flags, 0);  
 }
 #else
 static int open_relative(int fd, const char *name, int flags) {

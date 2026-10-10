@@ -22,7 +22,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-// Application-owned configuration override, not an emulator implementation.
+ 
 std::string g_input_config_override;
 cfg_input_configurations g_cfg_input_configs;
 
@@ -63,7 +63,7 @@ void zd::install_callbacks(main_queue& queue) {
                                    stx::atomic_ptr<std::string>*, std::shared_ptr<void>) {};
     cb.enable_disc_eject = [](bool) {};
     cb.enable_disc_insert = [](bool) {};
-    // Keep the catalog alive when an emulated title asks to quit.
+     
     cb.try_to_quit = [](bool, std::function<void()>) { return false; };
     cb.handle_taskbar_progress = [](s32, s32) {};
     cb.init_kb_handler = [] {

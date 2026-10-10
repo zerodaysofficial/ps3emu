@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
-/* Renderer is serialized by the platform loop / host preview lock. The budget
- * counts allocation headers and the temporary old+new buffers during growth. */
+
+
 #include "decode_budget.h"
 #include <stdint.h>
 #include <stdlib.h>

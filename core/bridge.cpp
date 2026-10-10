@@ -22,8 +22,8 @@ void message(char* out, std::size_t capacity, const char* text) {
 bool on_owner() { return owner == std::this_thread::get_id(); }
 }
 
-// Original lifecycle wait helper. Pump our owner queue while waiting for the
-// real predicate, so joining core workers never blocks their main callbacks.
+ 
+ 
 void qt_events_aware_op(int interval_ms, std::function<bool()> done) {
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
     while (!done()) {

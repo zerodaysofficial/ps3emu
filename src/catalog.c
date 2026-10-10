@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #ifdef __PROSPERO__
-/* Present in the target libc; absent from OPSDK's minimal C header. */
+ 
 extern DIR *fdopendir(int fd);
 #endif
 #define MAX_DEPTH 8
@@ -144,7 +144,7 @@ static int parse_sfo(zd_game *g, const unsigned char *b, size_t len) {
   }
   return g->title[0] && g->title_id[0];
 }
-/* Damaged metadata remains visible, but is never accepted for launch. */
+ 
 static int describe(const char *root, const char *path, int root_fd,
                     int game_fd, zd_game *out) {
   char metadata[ZD_PATH], sfo[ZD_PATH], usrdir[ZD_PATH];
