@@ -50,14 +50,14 @@ public:
             std::function<void()> fn;
             {
                 std::lock_guard lock(mutex_);
-                // A lifecycle callback may recursively pump this queue and
-                // consume the work counted by the outer drain's budget.
+                 
+                 
                 if (pending_.empty()) break;
                 fn = std::move(pending_.front());
                 pending_.pop_front();
             }
-            // If this throws, later callbacks remain queued, including any
-            // workers waiting for their completion notification.
+             
+             
             fn();
             ++count;
         }

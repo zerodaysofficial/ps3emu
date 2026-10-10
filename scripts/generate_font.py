@@ -48,7 +48,7 @@ def main():
         advances.append(max(1, min(0xffff, advance)))
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
-    # Header consumed by zd_render_init: magic, width, height, 224 u16 advances.
+     
     header = b'ZDF1' + struct.pack('<HH', 1024, 896) + struct.pack('<224H', *advances)
     out.write_bytes(header + atlas.tobytes())
     print(f'{out}: {out.stat().st_size} bytes from {font_path}')

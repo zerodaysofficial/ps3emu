@@ -22,8 +22,8 @@ fi
 : "${ZD_NINJA:=ninja}"
 export OPENPROSPERO_ROOT OPENPROSPERO_SDK OPENPROSPERO_CLANG OPENPROSPERO_CLANGXX
 export OPENPROSPERO_LLD OPENPROSPERO_AR
-# Prebuilt Linux host tools may retain their original CMake RUNPATH. The
-# packaged library directory takes precedence and makes them relocatable.
+ 
+ 
 if [[ -d "$OPENPROSPERO_ROOT/build/lib" ]]; then
   export LD_LIBRARY_PATH="$OPENPROSPERO_ROOT/build/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 fi

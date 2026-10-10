@@ -7,8 +7,8 @@
 #include <cstdio>
 
 namespace zd {
-// The upstream NP fallback dereferences these providers unconditionally.
-// Preserve its dialog contract and complete unavailable operations as cancel.
+ 
+ 
 class unavailable_send_dialog final : public SendMessageDialogBase {
 public:
     error_code Exec(message_data&, std::set<std::string>&) override {
